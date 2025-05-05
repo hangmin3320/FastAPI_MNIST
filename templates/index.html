@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MNIST Digit Recognizer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .drawing-container {
+            border: 1px solid #ddd;
+            padding: 20px;
+            border-radius: 5px;
+            margin-top: 20px;
+            text-align: center;
+        }
+        .canvas-container {
+            display: inline-block;
+            margin: 20px auto;
+            position: relative;
+            /* Display the 28x28 canvas larger for usability */
+            /* Use integer multiple for sharper pixels if possible */
+            width: 280px; /* Display width */
+            height: 280px; /* Display height */
+        }
+        #drawing-canvas {
+            border: 1px solid #000;
+            background-color: #fff;
+            cursor: crosshair;
+            touch-action: none;
+            /* Make the canvas element fill its container */
+            width: 100%;
+            height: 100%;
+            /* Prevent blurring on scaling */
+            image-rendering: pixelated; /* Modern browsers */
+            image-rendering: -moz-crisp-edges; /* Firefox */
+            image-rendering: crisp-edges; /* Older browsers */
+        }
+        .button-container {
+            margin-top: 15px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            display: none;
+        }
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+        .success {
+            color: green;
+            font-weight: bold;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button.clear {
+            background-color: #f44336;
+        }
+        button.clear:hover {
+            background-color: #d32f2f;
+        }
+    </style>
+</head>
+<body>
+    <h1>MNIST Digit Recognizer</h1>
+
+    <div class="drawing-container">
+        <h2>Draw a digit (0-9) below (28x28)</h2>
+        <div class="canvas-container">
+            <!-- Set actual canvas resolution to 28x28 -->
+            <canvas id="drawing-canvas" width="28" height="28"></canvas>
+        </div>
+        <div class="button-container">
+            <button id="clear-button" class="clear">Clear</button>
+            <button id="predict-button">Predict</button>
+        </div>
+    </div>
+
+    <div id="result" class="result">
+        <h2>Prediction Result</h2>
+        <p id="prediction"></p>
+        <p id="confidence"></p>
+        <p id="detail"></p>
+        <div>
+            <h3>Preprocessed Image</h3>
+            <img id="processed-image" alt="Preprocessed Image" style="width: 140px; height: 140px; border: 1px solid #ddd; margin-top: 10px;">
+        </div>
+    </div>
+
+    <script>
+        // Canvas setup
+        const canvas = document.getElementById('drawing-canvas');
+        const ctx = canvas.getContext('2d');
+        const clearButton = document.getElementById('clear-button');
+        const predictButton = document.getElementById('predict-button');
+
+        // Set canvas to white background
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Drawing variables
+        let isDrawing = false;
+        let lastX = 0;
+        let lastY = 0;
+
+        // Calculate scaling factor for coordinates
+        const scaleX = canvas.width / canvas.offsetWidth;
+        const scaleY = canvas.height / canvas.offsetHeight;
+
+        // Drawing functions
+        function startDrawing(e) {
+            isDrawing = true;
+            [lastX, lastY] = getCoordinates(e);
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+
+            const [currentX, currentY] = getCoordinates(e);
+
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
+            ctx.lineTo(currentX, currentY);
+            ctx.strokeStyle = 'black';
+            // Adjust line width for 28x28 canvas (e.g., 1 or 2)
+            ctx.lineWidth = 2;
+            ctx.lineCap = 'round';
+            ctx.stroke();
+
+            [lastX, lastY] = [currentX, currentY];
+        }
+
+        function stopDrawing() {
+            isDrawing = false;
+        }
+
+        // Adjust coordinates based on canvas display size vs actual size
+        function getCoordinates(e) {
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left) * scaleX;
+            const y = (e.clientY - rect.top) * scaleY;
+            return [x, y];
+        }
+
+        function getTouchCoordinates(e) {
+            const rect = canvas.getBoundingClientRect();
+            const touch = e.touches[0];
+            const x = (touch.clientX - rect.left) * scaleX;
+            const y = (touch.clientY - rect.top) * scaleY;
+            return [x, y];
+        }
+
+        function clearCanvas() {
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        // Event listeners for mouse
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseout', stopDrawing);
+
+        // Event listeners for touch devices
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            [lastX, lastY] = getTouchCoordinates(e);
+            isDrawing = true;
+        });
+
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            if (!isDrawing) return;
+
+            const [currentX, currentY] = getTouchCoordinates(e);
+
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
+            ctx.lineTo(currentX, currentY);
+            ctx.strokeStyle = 'black';
+            // Adjust line width for 28x28 canvas (e.g., 1 or 2)
+            ctx.lineWidth = 2;
+            ctx.lineCap = 'round';
+            ctx.stroke();
+
+            [lastX, lastY] = [currentX, currentY];
+        });
+
+        canvas.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            isDrawing = false;
+        });
+
+        // Clear button
+        clearButton.addEventListener('click', clearCanvas);
+
+        // Predict button
+        predictButton.addEventListener('click', async function() {
+            canvas.toBlob(async function(blob) { // Use 'canvas' directly
+                const formData = new FormData();
+                formData.append('file', blob, 'drawing.png');
+
+                try {
+                    const response = await fetch('/predict/', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const result = await response.json();
+
+                    if (response.ok) {
+                        document.getElementById('prediction').textContent = `Predicted Class: ${result.predicted_class}`;
+                        document.getElementById('confidence').textContent = `Confidence: ${result.confidence}`;
+                        document.getElementById('detail').textContent = result.detail;
+                        // Display the preprocessed image
+                        if (result.processed_image) {
+                            document.getElementById('processed-image').src = result.processed_image;
+                        }
+                        document.getElementById('result').style.display = 'block';
+                    } else {
+                        // Display error from backend if available
+                        document.getElementById('prediction').textContent = `Error: ${result.error || response.statusText}`;
+                        document.getElementById('confidence').textContent = '';
+                        document.getElementById('detail').textContent = '';
+                        // Clear the image
+                        document.getElementById('processed-image').src = '';
+                        document.getElementById('result').style.display = 'block';
+                        // alert(`Error: ${result.error || 'Unknown error'}`); // Alternative: use alert
+                    }
+                } catch (error) {
+                     document.getElementById('prediction').textContent = `Error: ${error.message}`;
+                     document.getElementById('confidence').textContent = '';
+                     document.getElementById('detail').textContent = '';
+                     // Clear the image
+                     document.getElementById('processed-image').src = '';
+                     document.getElementById('result').style.display = 'block';
+                    // alert(`Error: ${error.message}`); // Alternative: use alert
+                }
+            }, 'image/png');
+        });
+    </script>
+</body>
+</html>
