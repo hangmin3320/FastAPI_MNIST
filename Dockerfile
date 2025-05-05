@@ -1,4 +1,4 @@
-FROM python:3.8-alpine
+FROM python:3.12-slim-bookworm
 
 # 작업 디렉토리 설정
 WORKDIR /app
