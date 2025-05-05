@@ -1,8 +1,6 @@
 torch~=2.5.1
 torchvision~=0.20.1
-matplotlib~=3.10.0
-tqdm~=4.67.1
 numpy~=2.2.1
 fastapi~=0.115.6
 pillow~=11.0.0
-requests~=2.32.3
+uvicorn~=0.34.0
