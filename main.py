@@ -43,7 +43,6 @@ class MNIST_CNN(nn.Module):
 
 device = torch.device("cpu")
 model_path = "Model/result/MNIST_CNN.pth"
-
 model = MNIST_CNN().to(device)
 state_dict = torch.load(model_path, map_location=device, weights_only=True)
 model.load_state_dict(state_dict)

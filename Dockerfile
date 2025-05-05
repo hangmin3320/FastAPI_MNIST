@@ -8,7 +8,6 @@ COPY requirements.txt .
 
 # 의존성 설치
 RUN pip install --no-cache-dir -r requirements.txt
-RUN pip install python-multipart
 
 # Flask 앱 코드를 컨테이너에 복사
 COPY . /app
