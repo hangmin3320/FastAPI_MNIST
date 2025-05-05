@@ -34,7 +34,7 @@ jobs:
             git pull origin main
             docker stop app || true
             docker rm app || true
-            docker build --no-cache -t app .
+            docker build -t app .
             docker run -d --name app -p 8000:8000 app
           EOF
         shell: bash
