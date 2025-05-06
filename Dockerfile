@@ -9,8 +9,7 @@ COPY requirements.txt .
 # 의존성 설치
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Flask 앱 코드를 컨테이너에 복사
+# FastAPI 앱 코드를 컨테이너에 복사
 COPY . /app
 
-# CMD ["fastapi", "run", "FastAPI.py", "--port", "80"]
 CMD ["uvicorn", "main:app", "--port", "8000", "--host", "0.0.0.0", "--log-level", "debug"]
